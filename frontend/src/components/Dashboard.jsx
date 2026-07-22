@@ -725,24 +725,24 @@ function DiscoveryEvent({ event, index }) {
 function InteractiveDemo() {
   const [activeScenario, setActiveScenario] = useState('normal')
   const [phase, setPhase] = useState('idle')
-  const mounted = useRef(true)
-  const timers = useRef([])
+  const [trigger, setTrigger] = useState(0)
   const plantState = null
   const trace = null
 
   const changeScenario = useCallback((name) => {
-    timers.current.forEach(t => clearTimeout(t))
-    timers.current = []
-    setActiveScenario(name)
     setPhase('thinking')
-    const t1 = setTimeout(() => { if (mounted.current) setPhase('sensors') }, 200)
-    const t2 = setTimeout(() => { if (mounted.current) setPhase('pipeline') }, 500)
-    const t3 = setTimeout(() => { if (mounted.current) setPhase('recommendation') }, 900)
-    const t4 = setTimeout(() => { if (mounted.current) setPhase('complete') }, 1400)
-    timers.current = [t1, t2, t3, t4]
+    setActiveScenario(name)
+    setTrigger(n => n + 1)
   }, [])
 
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; timers.current.forEach(t => clearTimeout(t)) } }, [])
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase('sensors'), 320)
+    const t2 = setTimeout(() => setPhase('pipeline'), 640)
+    const t3 = setTimeout(() => setPhase('recommendation'), 960)
+    const t4 = setTimeout(() => setPhase('complete'), 1280)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
+  }, [trigger])
+
   useEffect(() => { changeScenario('normal') }, [])
 
   // ── Everything comes from SCENARIO_STATE ──
