@@ -1460,7 +1460,7 @@ export default function Dashboard() {
         </RevealSection>
       </section>
 
-      <InteractiveDemo backendAvailable={backendAvailable} />
+      <InteractiveDemo backendAvailable={true} />
 
       <section className="adoption-section">
         <div className="adoption-inner">
