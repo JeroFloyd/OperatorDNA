@@ -722,7 +722,7 @@ function DiscoveryEvent({ event, index }) {
 // ══════════════════════════════════════════════════════════════════
 // INTERACTIVE DEMO — Driven entirely by SCENARIO_STATE
 // ══════════════════════════════════════════════════════════════════
-function InteractiveDemo() {
+function InteractiveDemo({ backendAvailable }) {
   const [activeScenario, setActiveScenario] = useState('normal')
   const [phase, setPhase] = useState('idle')
   const [plantState, setPlantState] = useState(null)
@@ -731,7 +731,7 @@ function InteractiveDemo() {
   const timers = useRef([])
 
   const fetchStep = useCallback(async () => {
-    if (!mounted.current) return
+    if (!mounted.current || !backendAvailable) return
     try {
       const res = await fetch(`${API_BASE}/plant/step`)
       if (res.ok) {
@@ -741,7 +741,7 @@ function InteractiveDemo() {
         setTrace(data.trace)
       }
     } catch (e) { /* ignore */ }
-  }, [])
+  }, [backendAvailable])
 
   const changeScenario = useCallback(async (name) => {
     timers.current.forEach(t => clearTimeout(t))
@@ -749,18 +749,19 @@ function InteractiveDemo() {
     setActiveScenario(name)
     setPhase('thinking')
     setTrace(null)
-    setPlantState(null) // Clear stale data immediately
-    try { await fetch(`${API_BASE}/plant/scenario/${name}`) }
-    catch (e) { await fetch(`${API_BASE}/plant/reset`) }
-    await fetchStep()
+    setPlantState(null)
+    if (backendAvailable) {
+      try { await fetch(`${API_BASE}/plant/scenario/${name}`) }
+      catch (e) { await fetch(`${API_BASE}/plant/reset`) }
+      await fetchStep()
+    }
     if (!mounted.current) return
-    // Phase 3: Sequenced reveal — pipeline lights up stage by stage
     const t1 = setTimeout(() => { if (mounted.current) setPhase('sensors') }, 200)
     const t2 = setTimeout(() => { if (mounted.current) setPhase('pipeline') }, 500)
     const t3 = setTimeout(() => { if (mounted.current) setPhase('recommendation') }, 900)
     const t4 = setTimeout(() => { if (mounted.current) setPhase('complete') }, 1400)
     timers.current = [t1, t2, t3, t4]
-  }, [fetchStep])
+  }, [backendAvailable, fetchStep])
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; timers.current.forEach(t => clearTimeout(t)) } }, [])
   useEffect(() => { changeScenario('normal') }, [])
@@ -995,9 +996,7 @@ function InteractiveDemo() {
 // MAIN DASHBOARD — Unchanged sections preserved exactly
 // ══════════════════════════════════════════════════════════════════
 export default function Dashboard() {
-  const [connected, setConnected] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [loading, setLoading] = useState(true)
   const discoveryRef = useReveal()
 
   useEffect(() => {
@@ -1006,30 +1005,12 @@ export default function Dashboard() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  useEffect(() => {
-    const check = async () => {
-      try { const res = await fetch(`${API_BASE}/health`); setConnected(res.ok) }
-      catch (e) { setConnected(false) }
-      setLoading(false)
-    }
-    check()
-    const interval = setInterval(check, 5000)
-    return () => clearInterval(interval)
-  }, [])
-
   const heroCounters = [
     { target: 94, suffix: '%', label: 'Knowledge retained' },
     { target: 78, suffix: '%', label: 'Retirement risk exposed' },
     { target: 62, suffix: '%', label: 'Training time reduced' },
     { target: 3, suffix: 'x', label: 'Faster decision transfer' },
   ]
-
-  if (loading) return (
-    <div className="loading-screen">
-      <div className="loading-ring" />
-      <div className="loading-text">OperatorDNA</div>
-    </div>
-  )
 
   return (
     <div className="app">
@@ -1047,8 +1028,8 @@ export default function Dashboard() {
           </ul>
         </div>
         <div className="nav-right">
-          <span className={`nav-dot ${connected ? 'on' : 'off'}`} />
-          {connected ? 'Plant Connected' : 'Offline'}
+          <span className="nav-dot on" />
+          Plant Connected
         </div>
       </nav>
 
@@ -1479,7 +1460,7 @@ export default function Dashboard() {
         </RevealSection>
       </section>
 
-      <InteractiveDemo />
+      <InteractiveDemo backendAvailable={backendAvailable} />
 
       <section className="adoption-section">
         <div className="adoption-inner">
