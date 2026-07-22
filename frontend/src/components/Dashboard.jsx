@@ -722,46 +722,25 @@ function DiscoveryEvent({ event, index }) {
 // ══════════════════════════════════════════════════════════════════
 // INTERACTIVE DEMO — Driven entirely by SCENARIO_STATE
 // ══════════════════════════════════════════════════════════════════
-function InteractiveDemo({ backendAvailable }) {
+function InteractiveDemo() {
   const [activeScenario, setActiveScenario] = useState('normal')
   const [phase, setPhase] = useState('idle')
-  const [plantState, setPlantState] = useState(null)
-  const [trace, setTrace] = useState(null)
   const mounted = useRef(true)
   const timers = useRef([])
+  const plantState = null
+  const trace = null
 
-  const fetchStep = useCallback(async () => {
-    if (!mounted.current || !backendAvailable) return
-    try {
-      const res = await fetch(`${API_BASE}/plant/step`)
-      if (res.ok) {
-        const data = await res.json()
-        if (!mounted.current) return
-        setPlantState(data.state)
-        setTrace(data.trace)
-      }
-    } catch (e) { /* ignore */ }
-  }, [backendAvailable])
-
-  const changeScenario = useCallback(async (name) => {
+  const changeScenario = useCallback((name) => {
     timers.current.forEach(t => clearTimeout(t))
     timers.current = []
     setActiveScenario(name)
     setPhase('thinking')
-    setTrace(null)
-    setPlantState(null)
-    if (backendAvailable) {
-      try { await fetch(`${API_BASE}/plant/scenario/${name}`) }
-      catch (e) { await fetch(`${API_BASE}/plant/reset`) }
-      await fetchStep()
-    }
-    if (!mounted.current) return
     const t1 = setTimeout(() => { if (mounted.current) setPhase('sensors') }, 200)
     const t2 = setTimeout(() => { if (mounted.current) setPhase('pipeline') }, 500)
     const t3 = setTimeout(() => { if (mounted.current) setPhase('recommendation') }, 900)
     const t4 = setTimeout(() => { if (mounted.current) setPhase('complete') }, 1400)
     timers.current = [t1, t2, t3, t4]
-  }, [backendAvailable, fetchStep])
+  }, [])
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; timers.current.forEach(t => clearTimeout(t)) } }, [])
   useEffect(() => { changeScenario('normal') }, [])
@@ -1460,7 +1439,7 @@ export default function Dashboard() {
         </RevealSection>
       </section>
 
-      <InteractiveDemo backendAvailable={true} />
+      <InteractiveDemo />
 
       <section className="adoption-section">
         <div className="adoption-inner">
